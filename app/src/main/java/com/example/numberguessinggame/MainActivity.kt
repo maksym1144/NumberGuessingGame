@@ -1,14 +1,16 @@
 package com.example.numberguessinggame
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -19,18 +21,30 @@ import com.example.numberguessinggame.ui.theme.NumberGuessingGameTheme
 
 class MainActivity : ComponentActivity() {
 
-
     private val gameViewModel by viewModels<GameViewModel>()
+
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+
+        }
+
+    private fun askForNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        askForNotificationPermission()
+
         setContent {
             NumberGuessingGameTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-
                     GameScreen(
                         userGuess = gameViewModel.userGuess,
                         gameState = gameViewModel.uiState,
@@ -90,12 +104,10 @@ fun GameScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             if (gameState.gameWon) {
-
                 Button(onClick = onPlayAgainClicked) {
                     Text(text = "PLAY AGAIN")
                 }
             } else {
-
                 Button(
                     onClick = onGuessClicked,
                     enabled = !gameState.gameWon
@@ -120,7 +132,6 @@ fun GameScreen(
 @Composable
 fun GameScreenPreview() {
     NumberGuessingGameTheme {
-
         GameScreen(
             userGuess = "50",
             gameState = GameState(),

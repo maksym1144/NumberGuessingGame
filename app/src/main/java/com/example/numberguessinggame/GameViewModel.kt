@@ -18,6 +18,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private var randomNumber: Int = 0
     private val highScoreManager = HighScoreManager(application)
+    private val notificationHelper = NotificationHelper(application)
 
     var uiState by mutableStateOf(GameState())
         private set
@@ -56,6 +57,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     highScoreManager.saveHighScore(newHighScore)
                 }
                 newGameWon = true
+                notificationHelper.showGameWonNotification(newGuessCount)
             }
         }
 
