@@ -1,11 +1,11 @@
 package com.example.numberguessinggame
 
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import kotlin.random.Random
-
 
 data class GameState(
     val hint: String = "I'm thinking of a number between 1 and 100.",
@@ -14,28 +14,24 @@ data class GameState(
     val gameWon: Boolean = false
 )
 
-class GameViewModel : ViewModel() {
-
+class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private var randomNumber: Int = 0
-
+    private val highScoreManager = HighScoreManager(application)
 
     var uiState by mutableStateOf(GameState())
         private set
-
 
     var userGuess by mutableStateOf("")
         private set
 
     init {
-
         resetGame()
     }
 
     fun updateUserGuess(guess: String) {
         userGuess = guess
     }
-
 
     fun handleGuess() {
         val guessNumber = userGuess.toIntOrNull()
@@ -57,11 +53,11 @@ class GameViewModel : ViewModel() {
                 newHint = "You got it in $newGuessCount tries!"
                 if (newGuessCount < uiState.highScore) {
                     newHighScore = newGuessCount
+                    highScoreManager.saveHighScore(newHighScore)
                 }
                 newGameWon = true
             }
         }
-
 
         uiState = uiState.copy(
             hint = newHint,
@@ -70,14 +66,13 @@ class GameViewModel : ViewModel() {
             gameWon = newGameWon
         )
 
-
         updateUserGuess("")
     }
 
-
     fun resetGame() {
         randomNumber = Random.nextInt(1, 101)
-        uiState = GameState(highScore = uiState.highScore)
+        val savedHighScore = highScoreManager.getHighScore()
+        uiState = GameState(highScore = savedHighScore)
         updateUserGuess("")
     }
 }
