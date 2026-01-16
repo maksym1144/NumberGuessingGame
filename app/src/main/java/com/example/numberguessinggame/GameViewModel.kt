@@ -53,7 +53,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var timerJob: Job? = null
 
     init {
-
         currentSurvivalStreak = highScoreManager.getSurvivalWinStreak()
     }
 
@@ -64,7 +63,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 delay(1000L)
                 uiState = uiState.copy(timeRemaining = uiState.timeRemaining - 1)
                 if (uiState.timeRemaining <= 0) {
-                    endGame(won = false)
+                    endGame(won = false, finalGuessCount = uiState.guessCount)
                 }
             }
         }
@@ -74,18 +73,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         timerJob?.cancel()
     }
 
-    private fun endGame(won: Boolean) {
+    // ##### POCZĄTEK ZMIANY #####
+    // Dodajemy `finalGuessCount` jako parametr
+    private fun endGame(won: Boolean, finalGuessCount: Int) {
         stopTimer()
         var finalHint = ""
-
         if (won) {
-            val newGuessCount = uiState.guessCount + 1
-
             when (uiState.gameMode) {
                 GameMode.CLASSIC -> {
-                    finalHint = "You got it in $newGuessCount tries!"
-                    if (newGuessCount < uiState.classicHighScore) {
-                        highScoreManager.saveClassicHighScore(newGuessCount)
+                    // Używamy nowej, poprawnej wartości
+                    finalHint = "You got it in $finalGuessCount tries!"
+                    if (finalGuessCount < uiState.classicHighScore) {
+                        highScoreManager.saveClassicHighScore(finalGuessCount)
                     }
                 }
                 GameMode.TIME_ATTACK -> {
@@ -103,9 +102,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
-            notificationHelper.showGameWonNotification(newGuessCount)
+            notificationHelper.showGameWonNotification(finalGuessCount)
         } else {
-
             if (uiState.gameMode == GameMode.SURVIVAL) {
                 currentSurvivalStreak = 0
                 highScoreManager.resetSurvivalWinStreak()
@@ -119,15 +117,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         uiState = uiState.copy(isGameActive = false, isGameOver = true, hint = finalHint, gameWon = won)
     }
 
-    fun exitGame() {
+    fun onExitGameScreen() {
         stopTimer()
-        uiState = GameState()
     }
+    // ##### KONIEC ZMIANY #####
 
     fun startGame(mode: GameMode) {
         randomNumber = Random.nextInt(1, 101)
-
-
         uiState = GameState(
             gameMode = mode,
             hint = "I'm thinking of a number between 1 and 100.",
@@ -137,7 +133,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             survivalBestStreak = highScoreManager.getSurvivalWinStreak()
         )
         userGuess = ""
-
         if (mode == GameMode.TIME_ATTACK) {
             startTimer()
         }
@@ -157,16 +152,23 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         val newGuessCount = uiState.guessCount + 1
         var newTriesRemaining = uiState.triesRemaining
-        if(uiState.gameMode == GameMode.SURVIVAL){
+        if (uiState.gameMode == GameMode.SURVIVAL) {
             newTriesRemaining--
         }
 
         val distance = abs(randomNumber - guessNumber)
         val won = distance == 0
 
+        // ##### POCZĄTEK ZMIANY #####
+        // Zawsze aktualizujemy stan PRZED podjęciem decyzji o końcu gry
+        uiState = uiState.copy(
+            guessCount = newGuessCount,
+            triesRemaining = newTriesRemaining
+        )
+
         if (won) {
-            uiState = uiState.copy(guessCount = newGuessCount)
-            endGame(won = true)
+            // Przekazujemy nową, poprawną wartość
+            endGame(won = true, finalGuessCount = newGuessCount)
         } else {
             val newHint = when {
                 distance in 1..3 -> "Burning hot! You're so close!"
@@ -175,16 +177,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 distance in 26..50 -> "Cold... Try a different range."
                 else -> "Freezing cold! You're far away."
             }
-            if(uiState.gameMode == GameMode.SURVIVAL && newTriesRemaining <= 0){
-                endGame(won = false)
+            if (uiState.gameMode == GameMode.SURVIVAL && newTriesRemaining <= 0) {
+                endGame(won = false, finalGuessCount = newGuessCount)
+            } else {
+                uiState = uiState.copy(hint = newHint)
             }
-            uiState = uiState.copy(hint = newHint)
         }
+        // ##### KONIEC ZMIANY #####
 
-        uiState = uiState.copy(
-            guessCount = newGuessCount,
-            triesRemaining = newTriesRemaining
-        )
         userGuess = ""
     }
 
