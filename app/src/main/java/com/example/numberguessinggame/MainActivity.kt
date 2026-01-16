@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -20,7 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -47,12 +48,25 @@ class MainActivity : ComponentActivity() {
         askForNotificationPermission()
         setContent {
             NumberGuessingGameTheme {
+                // ##### POCZĄTEK ZMIANY #####
+
+                // 1. Definiujemy nasz gradient pionowy
+                val gradientBrush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surface,    // To nasz jaśniejszy MidBlue
+                        MaterialTheme.colorScheme.background  // To nasz ciemniejszy DarkBlue
+                    )
+                )
+
+                // 2. Aplikujemy gradient do tła głównego kontenera
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(brush = gradientBrush) // Usunęliśmy stary kolor i dodaliśmy gradient
                 ) {
                     GameScreen(viewModel = gameViewModel)
                 }
+                // ##### KONIEC ZMIANY #####
             }
         }
     }
@@ -122,7 +136,7 @@ fun GameScreen(viewModel: GameViewModel) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(60.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             OutlinedTextField(
                 value = userGuess,
@@ -149,7 +163,7 @@ fun GameScreen(viewModel: GameViewModel) {
                     onClick = { viewModel.resetGame() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(70.dp),
+                        .height(50.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
@@ -160,7 +174,7 @@ fun GameScreen(viewModel: GameViewModel) {
                     onClick = { viewModel.handleGuess() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(70.dp),
+                        .height(50.dp),
                     enabled = userGuess.isNotBlank(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
