@@ -12,24 +12,22 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.random.Random
 
-// Definicja trybów gry
 enum class GameMode {
     CLASSIC,
     TIME_ATTACK,
     SURVIVAL
 }
 
-// Rozbudowany stan gry
 data class GameState(
     val gameMode: GameMode = GameMode.CLASSIC,
     val hint: String = "Select a mode to start!",
     val guessCount: Int = 0,
     val gameWon: Boolean = false,
     val isGameActive: Boolean = false,
-    val isGameOver: Boolean = false, // Nowa flaga dla porażki
+    val isGameOver: Boolean = false,
     val timeRemaining: Int = GameViewModel.TIME_LIMIT_SECONDS,
     val triesRemaining: Int = GameViewModel.TRIES_LIMIT,
-    // Pola na rekordy, na razie puste
+    // Pola na wszystkie rekordy
     val classicHighScore: Int = Int.MAX_VALUE,
     val timeAttackBestTime: Int = Int.MAX_VALUE,
     val survivalBestStreak: Int = 0
@@ -43,6 +41,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private var randomNumber: Int = 0
+    private var currentSurvivalStreak = 0 // Licznik obecnej serii wygranych
     private val highScoreManager = HighScoreManager(application)
     private val notificationHelper = NotificationHelper(application)
 
@@ -53,6 +52,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     private var timerJob: Job? = null
+
+    init {
+        // Przy pierwszym uruchomieniu wczytaj obecną serię
+        currentSurvivalStreak = highScoreManager.getSurvivalWinStreak()
+    }
 
     private fun startTimer() {
         timerJob?.cancel()
@@ -73,14 +77,41 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun endGame(won: Boolean) {
         stopTimer()
-        val finalHint = if (won) {
+        var finalHint = ""
+
+        if (won) {
+            val newGuessCount = uiState.guessCount + 1
+            // Logika zapisu rekordu w zależności od trybu
             when (uiState.gameMode) {
-                GameMode.CLASSIC -> "You got it in ${uiState.guessCount + 1} tries!"
-                GameMode.TIME_ATTACK -> "You got it with ${TIME_LIMIT_SECONDS - uiState.timeRemaining}s left!"
-                GameMode.SURVIVAL -> "You survived!"
+                GameMode.CLASSIC -> {
+                    finalHint = "You got it in $newGuessCount tries!"
+                    if (newGuessCount < uiState.classicHighScore) {
+                        highScoreManager.saveClassicHighScore(newGuessCount)
+                    }
+                }
+                GameMode.TIME_ATTACK -> {
+                    val timeTaken = TIME_LIMIT_SECONDS - uiState.timeRemaining
+                    finalHint = "You got it in $timeTaken seconds!"
+                    if (timeTaken < uiState.timeAttackBestTime) {
+                        highScoreManager.saveTimeAttackBestTime(timeTaken)
+                    }
+                }
+                GameMode.SURVIVAL -> {
+                    finalHint = "You survived!"
+                    currentSurvivalStreak++
+                    if (currentSurvivalStreak > uiState.survivalBestStreak) {
+                        highScoreManager.saveSurvivalWinStreak(currentSurvivalStreak)
+                    }
+                }
             }
+            notificationHelper.showGameWonNotification(newGuessCount)
         } else {
-            when (uiState.gameMode) {
+            // Logika przegranej
+            if (uiState.gameMode == GameMode.SURVIVAL) {
+                currentSurvivalStreak = 0
+                highScoreManager.resetSurvivalWinStreak()
+            }
+            finalHint = when (uiState.gameMode) {
                 GameMode.TIME_ATTACK -> "Time's Up! The number was $randomNumber."
                 GameMode.SURVIVAL -> "Out of tries! The number was $randomNumber."
                 else -> ""
@@ -89,23 +120,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         uiState = uiState.copy(isGameActive = false, isGameOver = true, hint = finalHint, gameWon = won)
     }
 
-    // Nowa, publiczna funkcja do bezpiecznego kończenia gry z UI
     fun exitGame() {
         stopTimer()
-        uiState = GameState() // Resetuje stan do absolutnego zera
+        uiState = GameState()
     }
 
     fun startGame(mode: GameMode) {
         randomNumber = Random.nextInt(1, 101)
 
-        // TODO: Odczytywać właściwe rekordy
-        val savedClassicHighScore = highScoreManager.getClassicHighScore()
-
+        // Wczytujemy wszystkie rekordy przy starcie gry
         uiState = GameState(
             gameMode = mode,
             hint = "I'm thinking of a number between 1 and 100.",
             isGameActive = true,
-            classicHighScore = savedClassicHighScore
+            classicHighScore = highScoreManager.getClassicHighScore(),
+            timeAttackBestTime = highScoreManager.getTimeAttackBestTime(),
+            survivalBestStreak = highScoreManager.getSurvivalWinStreak()
         )
         userGuess = ""
 
@@ -136,9 +166,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val won = distance == 0
 
         if (won) {
-            // TODO: Zapisywać właściwe rekordy
+            uiState = uiState.copy(guessCount = newGuessCount) // Zaktualizuj stan przed zakończeniem
             endGame(won = true)
-            notificationHelper.showGameWonNotification(newGuessCount)
         } else {
             val newHint = when {
                 distance in 1..3 -> "Burning hot! You're so close!"

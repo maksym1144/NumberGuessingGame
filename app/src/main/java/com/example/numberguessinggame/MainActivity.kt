@@ -67,7 +67,6 @@ class MainActivity : ComponentActivity() {
                                 viewModel = gameViewModel,
                                 onNavigateBack = {
                                     navController.popBackStack()
-                                    // Używamy nowej, poprawnej funkcji
                                     gameViewModel.exitGame()
                                 }
                             )
@@ -112,7 +111,6 @@ fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Nowy, dynamiczny pasek informacji
             TopInfoBar(gameState = gameState)
 
             Spacer(Modifier.weight(0.2f))
@@ -150,7 +148,7 @@ fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
                     singleLine = true,
                     textStyle = TextStyle(fontSize = 22.sp, textAlign = TextAlign.Center),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    enabled = gameState.isGameActive && !gameState.gameWon
+                    enabled = gameState.isGameActive
                 )
 
                 if (gameState.isGameOver) {
@@ -178,27 +176,35 @@ fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
     }
 }
 
-// Nowy komponent do wyświetlania dynamicznych informacji
 @Composable
 fun TopInfoBar(gameState: GameState) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceAround,
+        horizontalArrangement = Arrangement.SpaceBetween, // Zmienione na SpaceBetween
         verticalAlignment = Alignment.CenterVertically
     ) {
-        when (gameState.gameMode) {
+        // Lewa strona: Dynamiczny licznik
+        val statusText = when (gameState.gameMode) {
+            GameMode.CLASSIC -> "Tries: ${gameState.guessCount}"
+            GameMode.TIME_ATTACK -> "Time: ${gameState.timeRemaining}s"
+            GameMode.SURVIVAL -> "Tries Left: ${gameState.triesRemaining}"
+        }
+        Text(text = statusText, style = MaterialTheme.typography.bodyLarge)
+
+        // Prawa strona: Dynamiczny rekord
+        val recordText = when (gameState.gameMode) {
             GameMode.CLASSIC -> {
-                Text(text = "Tries: ${gameState.guessCount}")
-                // TODO: Wyświetlić rekord dla trybu Classic
+                val best = if (gameState.classicHighScore == Int.MAX_VALUE) "--" else gameState.classicHighScore
+                "Best: $best tries"
             }
             GameMode.TIME_ATTACK -> {
-                Text(text = "Time: ${gameState.timeRemaining}s")
-                // TODO: Wyświetlić rekord dla trybu Time Attack
+                val best = if (gameState.timeAttackBestTime == Int.MAX_VALUE) "--" else gameState.timeAttackBestTime
+                "Best: ${best}s"
             }
             GameMode.SURVIVAL -> {
-                Text(text = "Tries Left: ${gameState.triesRemaining}")
-                // TODO: Wyświetlić rekord dla trybu Survival
+                "Streak: ${gameState.survivalBestStreak}"
             }
         }
+        Text(text = recordText, style = MaterialTheme.typography.bodyLarge)
     }
 }
