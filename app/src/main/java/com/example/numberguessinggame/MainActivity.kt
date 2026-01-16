@@ -234,7 +234,7 @@ fun TopInfoBar(gameState: GameState) {
             GameMode.TIME_ATTACK -> "Time: ${gameState.timeRemaining}s"
             GameMode.SURVIVAL -> "Tries Left: ${gameState.triesRemaining}"
         }
-        Text(text = statusText, style = MaterialTheme.typography.bodyLarge)
+        Text(text = statusText, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
         val recordText = when (gameState.gameMode) {
             GameMode.CLASSIC -> {
                 val best = if (gameState.classicHighScore == Int.MAX_VALUE) "--" else gameState.classicHighScore
@@ -248,7 +248,7 @@ fun TopInfoBar(gameState: GameState) {
                 "Streak: ${gameState.survivalBestStreak}"
             }
         }
-        Text(text = recordText, style = MaterialTheme.typography.bodyLarge)
+        Text(text = recordText, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
     }
 }
 
