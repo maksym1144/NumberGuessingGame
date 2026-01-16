@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel = gameViewModel,
                                 onNavigateBack = {
                                     navController.popBackStack()
-                                    // Używamy nowej, poprawnej funkcji
+
                                     gameViewModel.onExitGameScreen()
                                 }
                             )

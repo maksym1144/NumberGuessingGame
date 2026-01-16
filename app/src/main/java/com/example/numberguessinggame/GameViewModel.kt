@@ -73,15 +73,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         timerJob?.cancel()
     }
 
-    // ##### POCZĄTEK ZMIANY #####
-    // Dodajemy `finalGuessCount` jako parametr
     private fun endGame(won: Boolean, finalGuessCount: Int) {
         stopTimer()
         var finalHint = ""
         if (won) {
             when (uiState.gameMode) {
                 GameMode.CLASSIC -> {
-                    // Używamy nowej, poprawnej wartości
+
                     finalHint = "You got it in $finalGuessCount tries!"
                     if (finalGuessCount < uiState.classicHighScore) {
                         highScoreManager.saveClassicHighScore(finalGuessCount)
@@ -120,7 +118,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun onExitGameScreen() {
         stopTimer()
     }
-    // ##### KONIEC ZMIANY #####
+
 
     fun startGame(mode: GameMode) {
         randomNumber = Random.nextInt(1, 101)
@@ -159,15 +157,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val distance = abs(randomNumber - guessNumber)
         val won = distance == 0
 
-        // ##### POCZĄTEK ZMIANY #####
-        // Zawsze aktualizujemy stan PRZED podjęciem decyzji o końcu gry
+
         uiState = uiState.copy(
             guessCount = newGuessCount,
             triesRemaining = newTriesRemaining
         )
 
         if (won) {
-            // Przekazujemy nową, poprawną wartość
+
             endGame(won = true, finalGuessCount = newGuessCount)
         } else {
             val newHint = when {
@@ -183,7 +180,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 uiState = uiState.copy(hint = newHint)
             }
         }
-        // ##### KONIEC ZMIANY #####
 
         userGuess = ""
     }
