@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import kotlin.math.abs
 import kotlin.random.Random
 
 data class GameState(
@@ -42,15 +43,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
+        // ##### POCZĄTEK NOWEJ LOGIKI #####
+
         val newGuessCount = uiState.guessCount + 1
         var newHint: String
         var newGameWon = false
         var newHighScore = uiState.highScore
 
+        // 1. Obliczamy odległość od prawidłowej odpowiedzi
+        val distance = abs(randomNumber - guessNumber)
+
+        // 2. Wybieramy podpowiedź na podstawie odległości
         when {
-            guessNumber > randomNumber -> newHint = "Hint: Too high!"
-            guessNumber < randomNumber -> newHint = "Hint: Too low!"
-            else -> {
+            distance == 0 -> {
                 newHint = "You got it in $newGuessCount tries!"
                 if (newGuessCount < uiState.highScore) {
                     newHighScore = newGuessCount
@@ -59,7 +64,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 newGameWon = true
                 notificationHelper.showGameWonNotification(newGuessCount)
             }
+            distance in 1..3 -> newHint = "Burning hot! You're so close!"
+            distance in 4..10 -> newHint = "Getting hot! Really close!"
+            distance in 11..25 -> newHint = "Warm. You're on the right track."
+            distance in 26..50 -> newHint = "Cold... Try a different range."
+            else -> newHint = "Freezing cold! You're far away."
         }
+
+        // ##### KONIEC NOWEJ LOGIKI #####
 
         uiState = uiState.copy(
             hint = newHint,
