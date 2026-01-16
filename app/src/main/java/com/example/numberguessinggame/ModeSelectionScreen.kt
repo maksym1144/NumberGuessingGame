@@ -1,6 +1,9 @@
 package com.example.numberguessinggame
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +17,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -25,49 +31,77 @@ import androidx.compose.ui.unit.sp
 fun ModeSelectionScreen(
     onModeSelected: (GameMode) -> Unit
 ) {
-    // ##### POCZĄTEK ZMIANY #####
-    val scrollState = rememberScrollState()
-
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(scrollState) // Dodajemy możliwość przewijania
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(16.dp)
     ) {
-        // ##### KONIEC ZMIANY #####
-        Text(
-            text = "Number Guessing Game",
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
-        )
+        val scrollState = rememberScrollState()
 
-        Spacer(modifier = Modifier.height(64.dp))
 
-        ModeButton(
-            title = "Classic Mode",
-            description = "Beat your best score.",
-            onClick = { onModeSelected(GameMode.CLASSIC) }
-        )
+        val isScrolledToEnd by remember {
+            derivedStateOf {
+                scrollState.value == scrollState.maxValue
+            }
+        }
 
-        Spacer(modifier = Modifier.height(24.dp))
 
-        ModeButton(
-            title = "Time Attack",
-            description = "Guess before time runs out.",
-            onClick = { onModeSelected(GameMode.TIME_ATTACK) }
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Guess the Number",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(64.dp))
 
-        ModeButton(
-            title = "Survival Mode",
-            description = "Guess with a limited number of tries.",
-            onClick = { onModeSelected(GameMode.SURVIVAL) }
-        )
+            ModeButton(
+                title = "Classic Mode",
+                description = "Beat your best score.",
+                onClick = { onModeSelected(GameMode.CLASSIC) }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            ModeButton(
+                title = "Time Attack",
+                description = "Guess before time runs out.",
+                onClick = { onModeSelected(GameMode.TIME_ATTACK) }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            ModeButton(
+                title = "Survival Mode",
+                description = "Guess with a limited number of tries.",
+                onClick = { onModeSelected(GameMode.SURVIVAL) }
+            )
+
+
+            Spacer(modifier = Modifier.height(48.dp))
+        }
+
+
+        AnimatedVisibility(
+            visible = isScrolledToEnd,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = fadeIn()
+        ) {
+            Text(
+                text = "Created by maksym1144",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            )
+        }
+
     }
 }
 
