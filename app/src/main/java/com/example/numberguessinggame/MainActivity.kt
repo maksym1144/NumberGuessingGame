@@ -1,6 +1,7 @@
 package com.example.numberguessinggame
 
 import android.app.Application
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,8 +10,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Quiz
@@ -21,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -47,7 +51,7 @@ class MainActivity : ComponentActivity() {
                         MaterialTheme.colorScheme.background
                     )
                 )
-                Surface(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(brush = gradientBrush)
@@ -81,19 +85,13 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
-    val userGuess = viewModel.userGuess
-    val gameState = viewModel.uiState
-
-    val animatedScale by animateFloatAsState(
-        targetValue = if (gameState.gameWon) 1.2f else 1.0f,
-        animationSpec = tween(durationMillis = 500),
-        label = "scaleAnimation"
-    )
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(gameState.gameMode.name.replace('_', ' ')) },
+                title = { Text(viewModel.uiState.gameMode.name.replace('_', ' ')) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -104,74 +102,122 @@ fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
         },
         containerColor = Color.Transparent
     ) { innerPadding ->
-        Column(
+        if (isLandscape) {
+            LandscapeLayout(
+                modifier = Modifier.padding(innerPadding),
+                viewModel = viewModel
+            )
+        } else {
+            PortraitLayout(
+                modifier = Modifier.padding(innerPadding),
+                viewModel = viewModel
+            )
+        }
+    }
+}
+
+@Composable
+fun PortraitLayout(modifier: Modifier = Modifier, viewModel: GameViewModel) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TopInfoBar(gameState = viewModel.uiState)
+        Spacer(Modifier.weight(0.2f))
+        GameContent(viewModel = viewModel)
+        Spacer(Modifier.height(32.dp))
+        GameActions(viewModel = viewModel)
+        Spacer(Modifier.weight(1f))
+    }
+}
+
+@Composable
+fun LandscapeLayout(modifier: Modifier = Modifier, viewModel: GameViewModel) {
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TopInfoBar(gameState = viewModel.uiState)
+        Spacer(Modifier.height(16.dp))
+        GameContent(viewModel = viewModel)
+        Spacer(Modifier.height(24.dp))
+        GameActions(viewModel = viewModel)
+    }
+}
+
+@Composable
+fun GameContent(viewModel: GameViewModel) {
+    val gameState = viewModel.uiState
+    val animatedScale by animateFloatAsState(
+        targetValue = if (gameState.gameWon) 1.2f else 1.0f,
+        animationSpec = tween(durationMillis = 500),
+        label = "scaleAnimation"
+    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Quiz,
+            contentDescription = "Guess Icon",
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = gameState.hint,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            TopInfoBar(gameState = gameState)
+                .scale(animatedScale)
+                .padding(horizontal = 16.dp),
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground,
+            lineHeight = 30.sp
+        )
+    }
+}
 
-            Spacer(Modifier.weight(0.2f))
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+@Composable
+fun GameActions(viewModel: GameViewModel) {
+    val userGuess = viewModel.userGuess
+    val gameState = viewModel.uiState
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        OutlinedTextField(
+            value = userGuess,
+            onValueChange = { viewModel.updateUserGuess(it) },
+            label = { Text("Your guess", fontSize = 18.sp) },
+            singleLine = true,
+            textStyle = TextStyle(fontSize = 22.sp, textAlign = TextAlign.Center),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            enabled = gameState.isGameActive && !gameState.gameWon
+        )
+        if (gameState.isGameOver) {
+            Button(
+                onClick = { viewModel.resetGame() },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Quiz,
-                    contentDescription = "Guess Icon",
-                    modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = gameState.hint,
-                    modifier = Modifier
-                        .scale(animatedScale)
-                        .padding(horizontal = 16.dp),
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    lineHeight = 30.sp
-                )
+                Text(text = "PLAY AGAIN", fontSize = 16.sp)
             }
-            Spacer(Modifier.height(32.dp))
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+        } else {
+            Button(
+                onClick = { viewModel.handleGuess() },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                enabled = userGuess.isNotBlank() && gameState.isGameActive,
+                shape = RoundedCornerShape(16.dp)
             ) {
-                OutlinedTextField(
-                    value = userGuess,
-                    onValueChange = { viewModel.updateUserGuess(it) },
-                    label = { Text("Your guess", fontSize = 18.sp) },
-                    singleLine = true,
-                    textStyle = TextStyle(fontSize = 22.sp, textAlign = TextAlign.Center),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    enabled = gameState.isGameActive
-                )
-
-                if (gameState.isGameOver) {
-                    Button(
-                        onClick = { viewModel.resetGame() },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Text(text = "PLAY AGAIN", fontSize = 16.sp)
-                    }
-                } else {
-                    Button(
-                        onClick = { viewModel.handleGuess() },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        enabled = userGuess.isNotBlank() && gameState.isGameActive,
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(text = "GUESS", fontSize = 16.sp)
-                    }
-                }
+                Text(text = "GUESS", fontSize = 16.sp)
             }
-            Spacer(Modifier.weight(1f))
         }
     }
 }
@@ -180,18 +226,15 @@ fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
 fun TopInfoBar(gameState: GameState) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween, // Zmienione na SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Lewa strona: Dynamiczny licznik
         val statusText = when (gameState.gameMode) {
             GameMode.CLASSIC -> "Tries: ${gameState.guessCount}"
             GameMode.TIME_ATTACK -> "Time: ${gameState.timeRemaining}s"
             GameMode.SURVIVAL -> "Tries Left: ${gameState.triesRemaining}"
         }
         Text(text = statusText, style = MaterialTheme.typography.bodyLarge)
-
-        // Prawa strona: Dynamiczny rekord
         val recordText = when (gameState.gameMode) {
             GameMode.CLASSIC -> {
                 val best = if (gameState.classicHighScore == Int.MAX_VALUE) "--" else gameState.classicHighScore
@@ -206,5 +249,14 @@ fun TopInfoBar(gameState: GameState) {
             }
         }
         Text(text = recordText, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GameScreenPreview() {
+    NumberGuessingGameTheme {
+        val fakeViewModel = GameViewModel(Application())
+        GameScreen(viewModel = fakeViewModel, onNavigateBack = {})
     }
 }
