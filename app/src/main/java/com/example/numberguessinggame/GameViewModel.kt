@@ -43,17 +43,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        // ##### POCZĄTEK NOWEJ LOGIKI #####
 
         val newGuessCount = uiState.guessCount + 1
         var newHint: String
         var newGameWon = false
         var newHighScore = uiState.highScore
 
-        // 1. Obliczamy odległość od prawidłowej odpowiedzi
+
         val distance = abs(randomNumber - guessNumber)
 
-        // 2. Wybieramy podpowiedź na podstawie odległości
+
         when {
             distance == 0 -> {
                 newHint = "You got it in $newGuessCount tries!"
@@ -71,7 +70,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             else -> newHint = "Freezing cold! You're far away."
         }
 
-        // ##### KONIEC NOWEJ LOGIKI #####
 
         uiState = uiState.copy(
             hint = newHint,
