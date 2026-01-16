@@ -8,11 +8,20 @@ import androidx.lifecycle.AndroidViewModel
 import kotlin.math.abs
 import kotlin.random.Random
 
+// Definiujemy możliwe tryby gry
+enum class GameMode {
+    CLASSIC,
+    TIME_ATTACK,
+    SURVIVAL
+}
+
 data class GameState(
-    val hint: String = "I'm thinking of a number between 1 and 100.",
+    val gameMode: GameMode = GameMode.CLASSIC,
+    val hint: String = "Select a mode to start!",
     val guessCount: Int = 0,
     val highScore: Int = Int.MAX_VALUE,
-    val gameWon: Boolean = false
+    val gameWon: Boolean = false,
+    val isGameActive: Boolean = false // Czy gra się w ogóle rozpoczęła
 )
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
@@ -27,8 +36,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     var userGuess by mutableStateOf("")
         private set
 
-    init {
-        resetGame()
+    // Nowa funkcja do rozpoczynania gry w konkretnym trybie
+    fun startGame(mode: GameMode) {
+        randomNumber = Random.nextInt(1, 101)
+        val savedHighScore = highScoreManager.getHighScore() // Na razie odczytujemy tylko jeden rekord
+        uiState = GameState(
+            gameMode = mode,
+            hint = "I'm thinking of a number between 1 and 100.",
+            highScore = savedHighScore,
+            isGameActive = true
+        )
+        userGuess = ""
     }
 
     fun updateUserGuess(guess: String) {
@@ -36,6 +54,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun handleGuess() {
+        if (!uiState.isGameActive) return
+
         val guessNumber = userGuess.toIntOrNull()
 
         if (guessNumber == null) {
@@ -43,15 +63,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-
         val newGuessCount = uiState.guessCount + 1
         var newHint: String
         var newGameWon = false
         var newHighScore = uiState.highScore
 
-
         val distance = abs(randomNumber - guessNumber)
-
 
         when {
             distance == 0 -> {
@@ -70,7 +87,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             else -> newHint = "Freezing cold! You're far away."
         }
 
-
         uiState = uiState.copy(
             hint = newHint,
             guessCount = newGuessCount,
@@ -78,13 +94,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             gameWon = newGameWon
         )
 
-        updateUserGuess("")
+        userGuess = ""
     }
 
     fun resetGame() {
-        randomNumber = Random.nextInt(1, 101)
-        val savedHighScore = highScoreManager.getHighScore()
-        uiState = GameState(highScore = savedHighScore)
-        updateUserGuess("")
+        // "Play Again" teraz po prostu restartuje grę w tym samym trybie
+        startGame(uiState.gameMode)
     }
 }

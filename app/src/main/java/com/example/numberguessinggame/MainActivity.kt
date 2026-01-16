@@ -1,12 +1,9 @@
 package com.example.numberguessinggame
 
-import android.Manifest
 import android.app.Application
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -15,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,24 +28,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.numberguessinggame.ui.theme.NumberGuessingGameTheme
 
 class MainActivity : ComponentActivity() {
 
     private val gameViewModel by viewModels<GameViewModel>()
 
-    private val requestPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
-
-    private fun askForNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        askForNotificationPermission()
         setContent {
             NumberGuessingGameTheme {
                 val gradientBrush = Brush.verticalGradient(
@@ -60,15 +53,37 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .background(brush = gradientBrush)
                 ) {
-                    GameScreen(viewModel = gameViewModel)
+                    // Tworzymy kontroler nawigacji
+                    val navController = rememberNavController()
+                    // Definiujemy "mapę" naszej aplikacji
+                    NavHost(navController = navController, startDestination = "mode_selection") {
+                        // Definicja ekranu wyboru trybu
+                        composable("mode_selection") {
+                            ModeSelectionScreen(
+                                onModeSelected = { gameMode ->
+                                    gameViewModel.startGame(gameMode)
+                                    navController.navigate("game_screen")
+                                }
+                            )
+                        }
+                        // Definicja ekranu gry
+                        composable("game_screen") {
+                            GameScreen(
+                                viewModel = gameViewModel,
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+// Funkcja GameScreen pozostaje, ale teraz ma przycisk powrotu
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameScreen(viewModel: GameViewModel) {
+fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
     val userGuess = viewModel.userGuess
     val gameState = viewModel.uiState
 
@@ -78,123 +93,94 @@ fun GameScreen(viewModel: GameViewModel) {
         label = "scaleAnimation"
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-        Text(
-            text = "High Score: ${if (gameState.highScore == Int.MAX_VALUE) "--" else gameState.highScore}",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-
-        Spacer(Modifier.weight(0.2f))
-
-
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(gameState.gameMode.name.replace('_', ' ')) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        },
+        containerColor = Color.Transparent
+    ) { innerPadding ->
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Quiz,
-                contentDescription = "Guess Icon",
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-
             Text(
-                text = "Guess the Number",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                text = "High Score: ${if (gameState.highScore == Int.MAX_VALUE) "--" else gameState.highScore}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground
             )
-
-            Text(
-                text = gameState.hint,
-                modifier = Modifier
-                    .scale(animatedScale)
-                    .padding(horizontal = 16.dp),
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onBackground,
-                lineHeight = 30.sp
-            )
-        }
-
-
-        Spacer(Modifier.height(32.dp))
-
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            OutlinedTextField(
-                value = userGuess,
-                onValueChange = { viewModel.updateUserGuess(it) },
-
-                label = { Text("Your guess", fontSize = 18.sp) },
-
-                singleLine = true,
-                textStyle = TextStyle(
-                    fontSize = 22.sp,
-                    textAlign = TextAlign.Center
-                ),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                enabled = !gameState.gameWon,
-                shape = RoundedCornerShape(16.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    disabledContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    cursorColor = MaterialTheme.colorScheme.primary
+            Spacer(Modifier.weight(0.2f))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Quiz,
+                    contentDescription = "Guess Icon",
+                    modifier = Modifier.size(80.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
-            )
+                Text(
+                    text = gameState.hint,
+                    modifier = Modifier
+                        .scale(animatedScale)
+                        .padding(horizontal = 16.dp),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    lineHeight = 30.sp
+                )
+            }
+            Spacer(Modifier.height(32.dp))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                OutlinedTextField(
+                    value = userGuess,
+                    onValueChange = { viewModel.updateUserGuess(it) },
+                    label = { Text("Your guess", fontSize = 18.sp) },
+                    singleLine = true,
+                    textStyle = TextStyle(
+                        fontSize = 22.sp,
+                        textAlign = TextAlign.Center
+                    ),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    enabled = !gameState.gameWon && gameState.isGameActive
+                )
 
-            if (gameState.gameWon) {
-                Button(
-                    onClick = { viewModel.resetGame() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text(text = "PLAY AGAIN", fontSize = 16.sp)
-                }
-            } else {
-                Button(
-                    onClick = { viewModel.handleGuess() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    enabled = userGuess.isNotBlank(),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text(text = "GUESS", fontSize = 16.sp)
+                if (gameState.gameWon) {
+                    Button(
+                        onClick = { viewModel.resetGame() },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text(text = "PLAY AGAIN", fontSize = 16.sp)
+                    }
+                } else {
+                    Button(
+                        onClick = { viewModel.handleGuess() },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        enabled = userGuess.isNotBlank() && gameState.isGameActive,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(text = "GUESS", fontSize = 16.sp)
+                    }
                 }
             }
+            Spacer(Modifier.weight(1f))
         }
-
-        Spacer(Modifier.weight(1f))
-    }
-}
-
-
-@Preview(showBackground = true)
-@Composable
-fun GameScreenPreview() {
-    NumberGuessingGameTheme {
-        val fakeViewModel = GameViewModel(Application())
-        GameScreen(viewModel = fakeViewModel)
     }
 }
