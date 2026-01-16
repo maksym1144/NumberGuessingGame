@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -48,25 +49,19 @@ class MainActivity : ComponentActivity() {
         askForNotificationPermission()
         setContent {
             NumberGuessingGameTheme {
-                // ##### POCZĄTEK ZMIANY #####
-
-                // 1. Definiujemy nasz gradient pionowy
                 val gradientBrush = Brush.verticalGradient(
                     colors = listOf(
-                        MaterialTheme.colorScheme.surface,    // To nasz jaśniejszy MidBlue
-                        MaterialTheme.colorScheme.background  // To nasz ciemniejszy DarkBlue
+                        MaterialTheme.colorScheme.secondary,
+                        MaterialTheme.colorScheme.background
                     )
                 )
-
-                // 2. Aplikujemy gradient do tła głównego kontenera
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(brush = gradientBrush) // Usunęliśmy stary kolor i dodaliśmy gradient
+                        .background(brush = gradientBrush)
                 ) {
                     GameScreen(viewModel = gameViewModel)
                 }
-                // ##### KONIEC ZMIANY #####
             }
         }
     }
@@ -89,17 +84,17 @@ fun GameScreen(viewModel: GameViewModel) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // GÓRNA CZĘŚĆ: Rekord
+
         Text(
             text = "High Score: ${if (gameState.highScore == Int.MAX_VALUE) "--" else gameState.highScore}",
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.secondary
+            color = MaterialTheme.colorScheme.onBackground
         )
 
-        // Ten spacer jest teraz bardzo mały, więc nie będzie prawie wcale "wypychał" od góry.
+
         Spacer(Modifier.weight(0.2f))
 
-        // ŚRODKOWA CZĘŚĆ: Główny interfejs gry
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -113,8 +108,9 @@ fun GameScreen(viewModel: GameViewModel) {
 
             Text(
                 text = "Guess the Number",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
 
             Text(
@@ -129,10 +125,10 @@ fun GameScreen(viewModel: GameViewModel) {
             )
         }
 
-        // Dodajemy tutaj mały, stały odstęp, aby oddzielić tekst od przycisków.
+
         Spacer(Modifier.height(32.dp))
 
-        // DOLNA CZĘŚĆ: Pole do wpisywania i przyciski
+
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -141,8 +137,14 @@ fun GameScreen(viewModel: GameViewModel) {
             OutlinedTextField(
                 value = userGuess,
                 onValueChange = { viewModel.updateUserGuess(it) },
-                label = { Text("Your guess") },
+
+                label = { Text("Your guess", fontSize = 18.sp) },
+
                 singleLine = true,
+                textStyle = TextStyle(
+                    fontSize = 22.sp,
+                    textAlign = TextAlign.Center
+                ),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 enabled = !gameState.gameWon,
                 shape = RoundedCornerShape(16.dp),
@@ -151,7 +153,7 @@ fun GameScreen(viewModel: GameViewModel) {
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     disabledContainerColor = MaterialTheme.colorScheme.surface,
                     focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.secondary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurface,
                     focusedTextColor = MaterialTheme.colorScheme.onSurface,
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                     cursorColor = MaterialTheme.colorScheme.primary
@@ -165,7 +167,7 @@ fun GameScreen(viewModel: GameViewModel) {
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text(text = "PLAY AGAIN", fontSize = 16.sp)
                 }
@@ -183,7 +185,6 @@ fun GameScreen(viewModel: GameViewModel) {
             }
         }
 
-        // Ten spacer jest teraz bardzo duży i "wypchnie" wszystko powyżej do góry.
         Spacer(Modifier.weight(1f))
     }
 }
@@ -193,7 +194,6 @@ fun GameScreen(viewModel: GameViewModel) {
 @Composable
 fun GameScreenPreview() {
     NumberGuessingGameTheme {
-        // Podgląd nie ma ViewModelu, więc używamy sztucznych danych
         val fakeViewModel = GameViewModel(Application())
         GameScreen(viewModel = fakeViewModel)
     }
