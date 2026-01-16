@@ -7,18 +7,20 @@ class HighScoreManager(context: Context) {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun getHighScore(): Int {
-        return prefs.getInt(KEY_HIGH_SCORE, Int.MAX_VALUE)
+    // Tryb Klasyczny
+    fun getClassicHighScore(): Int {
+        return prefs.getInt(KEY_CLASSIC_HIGH_SCORE, Int.MAX_VALUE)
     }
 
-    fun saveHighScore(score: Int) {
-        prefs.edit {
-            putInt(KEY_HIGH_SCORE, score)
-        }
+    fun saveClassicHighScore(score: Int) {
+        prefs.edit { putInt(KEY_CLASSIC_HIGH_SCORE, score) }
     }
+
+    // TODO: Dodać logikę dla Time Attack i Survival
 
     companion object {
         private const val PREFS_NAME = "GamePrefs"
-        private const val KEY_HIGH_SCORE = "high_score"
+        private const val KEY_CLASSIC_HIGH_SCORE = "classic_high_score"
+        // TODO: Dodać klucze dla nowych rekordów
     }
 }

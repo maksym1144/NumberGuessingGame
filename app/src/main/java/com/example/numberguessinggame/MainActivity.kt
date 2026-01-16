@@ -28,7 +28,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -53,11 +52,8 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .background(brush = gradientBrush)
                 ) {
-                    // Tworzymy kontroler nawigacji
                     val navController = rememberNavController()
-                    // Definiujemy "mapę" naszej aplikacji
                     NavHost(navController = navController, startDestination = "mode_selection") {
-                        // Definicja ekranu wyboru trybu
                         composable("mode_selection") {
                             ModeSelectionScreen(
                                 onModeSelected = { gameMode ->
@@ -66,11 +62,14 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-                        // Definicja ekranu gry
                         composable("game_screen") {
                             GameScreen(
                                 viewModel = gameViewModel,
-                                onNavigateBack = { navController.popBackStack() }
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                    // Używamy nowej, poprawnej funkcji
+                                    gameViewModel.exitGame()
+                                }
                             )
                         }
                     }
@@ -80,7 +79,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Funkcja GameScreen pozostaje, ale teraz ma przycisk powrotu
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
@@ -114,11 +112,9 @@ fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "High Score: ${if (gameState.highScore == Int.MAX_VALUE) "--" else gameState.highScore}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            // Nowy, dynamiczny pasek informacji
+            TopInfoBar(gameState = gameState)
+
             Spacer(Modifier.weight(0.2f))
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -152,15 +148,12 @@ fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
                     onValueChange = { viewModel.updateUserGuess(it) },
                     label = { Text("Your guess", fontSize = 18.sp) },
                     singleLine = true,
-                    textStyle = TextStyle(
-                        fontSize = 22.sp,
-                        textAlign = TextAlign.Center
-                    ),
+                    textStyle = TextStyle(fontSize = 22.sp, textAlign = TextAlign.Center),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    enabled = !gameState.gameWon && gameState.isGameActive
+                    enabled = gameState.isGameActive && !gameState.gameWon
                 )
 
-                if (gameState.gameWon) {
+                if (gameState.isGameOver) {
                     Button(
                         onClick = { viewModel.resetGame() },
                         modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -181,6 +174,31 @@ fun GameScreen(viewModel: GameViewModel, onNavigateBack: () -> Unit) {
                 }
             }
             Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
+// Nowy komponent do wyświetlania dynamicznych informacji
+@Composable
+fun TopInfoBar(gameState: GameState) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        when (gameState.gameMode) {
+            GameMode.CLASSIC -> {
+                Text(text = "Tries: ${gameState.guessCount}")
+                // TODO: Wyświetlić rekord dla trybu Classic
+            }
+            GameMode.TIME_ATTACK -> {
+                Text(text = "Time: ${gameState.timeRemaining}s")
+                // TODO: Wyświetlić rekord dla trybu Time Attack
+            }
+            GameMode.SURVIVAL -> {
+                Text(text = "Tries Left: ${gameState.triesRemaining}")
+                // TODO: Wyświetlić rekord dla trybu Survival
+            }
         }
     }
 }
